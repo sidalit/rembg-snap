@@ -16,7 +16,7 @@ description: |
      rembg i -m birefnet-general -a ~/Pictures/photo.jpg out.png
      rembg p ~/Pictures/input ~/Pictures/output
      cat photo.jpg | rembg i > photo-cut.png
-     rembg s --host 127.0.0.1 --port 7000
+     rembg s
      rembg d bria-rmbg
 
   **Models**
@@ -48,8 +48,7 @@ platforms:
   arm64:
 
 plugs:
-  # Python multiprocessing locks (Gradio, numba) need POSIX semaphores, which
-  # glibc creates under temporary names in /dev/shm.
+  # Python multiprocessing needs private POSIX semaphores.
   shmem:
     interface: shared-memory
     private: true
@@ -59,18 +58,18 @@ apps:
     command-chain: [bin/rembg-launch]
     command: bin/rembg
     plugs:
+      - desktop
       - home
       - removable-media
       - network
       - network-bind
       - shmem
     environment:
-      # snapd puts $SNAP/usr/bin first, which would run the system Python
-      # instead of the virtual environment's.
+      # Prefer the virtual environment's Python.
       PATH: $SNAP/bin:$SNAP/usr/bin:$PATH
-      # Keep downloaded models outside the revision-specific data directory.
+      BROWSER: /usr/bin/xdg-open
       U2NET_HOME: $SNAP_USER_COMMON
-      # numba caches compiled pymatting kernels next to the read-only sources.
+      # The default numba cache is beside read-only package files.
       NUMBA_CACHE_DIR: $SNAP_USER_COMMON/numba-cache
       GRADIO_ANALYTICS_ENABLED: 'False'
 
@@ -84,8 +83,12 @@ parts:
     build-packages:
       # poetry-dynamic-versioning reads the version from the git tag.
       - git
+      - patch
     stage-packages:
       - python3-venv
+    override-pull: |
+      craftctl default
+      patch -p1 < "$CRAFT_PROJECT_DIR/snap/patches/localhost-default.patch"
     override-build: |
       craftctl default
       install -Dm644 LICENSE.txt "$CRAFT_PART_INSTALL/share/doc/rembg/LICENSE"

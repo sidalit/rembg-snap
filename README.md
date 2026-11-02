@@ -36,11 +36,19 @@ rembg p ~/Pictures/input ~/Pictures/output
 cat photo.jpg | rembg i > photo-cut.png
 ```
 
-To use the HTTP API and browser interface, start the server and open `http://localhost:7000`:
+Start the HTTP API and browser interface at `http://127.0.0.1:7000`. On a desktop, it opens your default browser:
 
 ```bash
-rembg s --host 127.0.0.1 --port 7000
+rembg s
 ```
+
+To allow access from other devices on your network:
+
+```bash
+rembg s --host 0.0.0.0
+```
+
+Open `http://<your-computer-ip>:7000` on the other device and allow port 7000 through your firewall if needed.
 
 ## Configure
 
@@ -56,8 +64,6 @@ Models are stored in `~/snap/rembg/common/models` and are kept across snap refre
 
 - Only the CPU build of ONNX Runtime is included; NVIDIA CUDA and AMD ROCm acceleration are not available.
 - Hidden files directly under your home directory are inaccessible, including models in an existing `~/.u2net` folder. Copy them into `~/snap/rembg/common/models/<model>/` to avoid downloading them again.
-- `rembg s` listens on all interfaces by default. Pass `--host 127.0.0.1` to keep it local, and allow the port in your firewall to share it.
-- `rembg s` cannot open a browser for you; open the printed address yourself.
 - ONNX Runtime warns that it cannot detect GPU devices. These warnings go to stderr and do not affect the output image.
 
 ## Build
