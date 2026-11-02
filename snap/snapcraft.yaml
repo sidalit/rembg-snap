@@ -1,0 +1,105 @@
+name: rembg
+base: core26
+version: '2.0.86'
+title: rembg
+icon: snap/gui/rembg.png
+summary: Remove image backgrounds from the command line or a local web UI
+description: |
+  rembg removes the background from images with pretrained segmentation
+  models (U2-Net, BiRefNet, BRIA RMBG, SAM and others) run on the CPU with
+  ONNX Runtime. It processes single files, whole folders, binary streams,
+  or serves an HTTP API with a browser interface.
+
+  **Examples**
+
+     rembg i ~/Pictures/photo.jpg ~/Pictures/photo-cut.png
+     rembg i -m birefnet-general -a ~/Pictures/photo.jpg out.png
+     rembg p ~/Pictures/input ~/Pictures/output
+     cat photo.jpg | rembg i > photo-cut.png
+     rembg s --host 127.0.0.1 --port 7000
+     rembg d bria-rmbg
+
+  **Models**
+
+  Models are downloaded on first use and kept in
+  ~/snap/rembg/common/models, which survives snap refreshes. Custom models
+  passed with model_path must be placed under ~/snap/rembg/common.
+
+  **File access**
+
+  rembg can use images in your home directory. To also use USB drives and
+  other removable media (/media, /mnt), run:
+
+     sudo snap connect rembg:removable-media
+license: MIT
+grade: stable
+confinement: strict
+website: https://github.com/danielgatis/rembg
+source-code:
+  - https://github.com/danielgatis/rembg
+  - https://github.com/sidalit/rembg-snap
+issues:
+  - https://github.com/danielgatis/rembg/issues
+  - https://github.com/sidalit/rembg-snap/issues
+contact: https://github.com/sidalit/rembg-snap/issues
+
+platforms:
+  amd64:
+  arm64:
+
+plugs:
+  # Python multiprocessing locks (Gradio, numba) need POSIX semaphores, which
+  # glibc creates under temporary names in /dev/shm.
+  shmem:
+    interface: shared-memory
+    private: true
+
+apps:
+  rembg:
+    command-chain: [bin/rembg-launch]
+    command: bin/rembg
+    plugs:
+      - home
+      - removable-media
+      - network
+      - network-bind
+      - shmem
+    environment:
+      # snapd puts $SNAP/usr/bin first, which would run the system Python
+      # instead of the virtual environment's.
+      PATH: $SNAP/bin:$SNAP/usr/bin:$PATH
+      # Keep downloaded models outside the revision-specific data directory.
+      U2NET_HOME: $SNAP_USER_COMMON
+      # numba caches compiled pymatting kernels next to the read-only sources.
+      NUMBA_CACHE_DIR: $SNAP_USER_COMMON/numba-cache
+      GRADIO_ANALYTICS_ENABLED: 'False'
+
+parts:
+  rembg:
+    plugin: python
+    source: https://github.com/danielgatis/rembg.git
+    source-tag: v$SNAPCRAFT_PROJECT_VERSION
+    python-packages:
+      - '.[cpu,cli]'
+    build-packages:
+      # poetry-dynamic-versioning reads the version from the git tag.
+      - git
+    stage-packages:
+      - python3-venv
+    override-build: |
+      craftctl default
+      install -Dm644 LICENSE.txt "$CRAFT_PART_INSTALL/share/doc/rembg/LICENSE"
+    prime:
+      - -lib/python3.*/site-packages/numpy/**/tests
+      - -lib/python3.*/site-packages/scipy/**/tests
+      - -lib/python3.*/site-packages/skimage/**/tests
+      - -lib/python3.*/site-packages/pandas/tests
+      - -lib/python3.*/site-packages/numba/tests
+      - -lib/python3.*/site-packages/llvmlite/tests
+      - -lib/python3.*/site-packages/pymatting/tests
+
+  launcher:
+    plugin: dump
+    source: snap/local
+    organize:
+      rembg-launch: bin/rembg-launch

@@ -1,0 +1,11 @@
+#!/bin/sh
+# ONNX Runtime pins its worker threads to CPUs unless the thread count is
+# set, and strict confinement blocks sched_setaffinity. rembg passes
+# OMP_NUM_THREADS to ONNX Runtime, so default it to the physical core count,
+# which is also ONNX Runtime's own default.
+if [ -z "$OMP_NUM_THREADS" ]; then
+  cores=$(awk -F: '/^physical id/ { p = $2 } /^core id/ { c[p ":" $2] } END { print length(c) }' /proc/cpuinfo)
+  [ "$cores" -gt 0 ] || cores=$(nproc)
+  export OMP_NUM_THREADS="$cores"
+fi
+exec "$@"
