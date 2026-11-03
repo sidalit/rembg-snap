@@ -6,9 +6,10 @@ icon: snap/gui/rembg.png
 summary: Remove image backgrounds from the command line or a local web UI
 description: |
   rembg removes the background from images with pretrained segmentation
-  models (U2-Net, BiRefNet, BRIA RMBG, SAM and others) run on the CPU with
-  ONNX Runtime. It processes single files, whole folders, binary streams,
-  or serves an HTTP API with a browser interface.
+  models (U2-Net, BiRefNet, BRIA RMBG, SAM and others) with ONNX Runtime.
+  It processes single files, whole folders, binary streams, or serves an
+  HTTP API with a browser interface. CPU support is included; NVIDIA GPU
+  support is available through the optional cuda component.
 
   **Examples**
 
@@ -43,6 +44,9 @@ issues:
   - https://github.com/sidalit/rembg-snap/issues
 contact: https://github.com/sidalit/rembg-snap/issues
 
+assumes:
+  - snapd2.67
+
 platforms:
   amd64:
   arm64:
@@ -63,6 +67,7 @@ apps:
       - removable-media
       - network
       - network-bind
+      - opengl
       - shmem
     environment:
       # Prefer the virtual environment's Python.
@@ -71,6 +76,7 @@ apps:
       U2NET_HOME: $SNAP_USER_COMMON
       # The default numba cache is beside read-only package files.
       NUMBA_CACHE_DIR: $SNAP_USER_COMMON/numba-cache
+      CUDA_CACHE_PATH: $SNAP_USER_COMMON/nvidia-cache
       GRADIO_ANALYTICS_ENABLED: 'False'
 
 parts:
@@ -80,6 +86,7 @@ parts:
     source-tag: v$SNAPCRAFT_PROJECT_VERSION
     python-packages:
       - '.[cpu,cli]'
+      - onnxruntime==1.31.1
     build-packages:
       # poetry-dynamic-versioning reads the version from the git tag.
       - git
@@ -101,8 +108,29 @@ parts:
       - -lib/python3.*/site-packages/llvmlite/tests
       - -lib/python3.*/site-packages/pymatting/tests
 
+  cuda:
+    plugin: nil
+    build-packages:
+      - python3-venv
+    override-build: |
+      /usr/bin/python3 -m venv venv
+      venv/bin/python3 -m pip install --no-cache-dir --no-compile \
+        'onnxruntime-gpu[cuda,cudnn]==1.31.1'
+      # Common Python dependencies are already supplied by the CPU runtime.
+      mkdir -p "$CRAFT_PART_INSTALL/site-packages"
+      mv venv/lib/python*/site-packages/onnxruntime* \
+        venv/lib/python*/site-packages/nvidia* "$CRAFT_PART_INSTALL/site-packages/"
+    organize:
+      '*': (component/cuda)
+
   launcher:
     plugin: dump
     source: snap/local
     organize:
       rembg-launch: bin/rembg-launch
+
+components:
+  cuda:
+    type: standard
+    summary: ONNX Runtime with CUDA for NVIDIA GPUs
+    description: GPU-enabled ONNX Runtime with CUDA 13 and cuDNN runtime libraries.

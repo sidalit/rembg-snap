@@ -1,4 +1,10 @@
 #!/bin/sh
+cuda="${SNAP_COMPONENTS:-$SNAP/../components/$SNAP_REVISION}/cuda/site-packages"
+if [ -d "$cuda/onnxruntime" ]; then
+  export PYTHONPATH="$cuda${PYTHONPATH:+:$PYTHONPATH}"
+  export LD_LIBRARY_PATH="$cuda/nvidia/cu13/lib:$cuda/nvidia/cudnn/lib:$SNAP_LIBRARY_PATH${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+fi
+
 # Explicit thread counts avoid ONNX Runtime's blocked CPU-affinity calls.
 # Keep its default physical-core count unless the user overrides it.
 if [ -z "$OMP_NUM_THREADS" ]; then

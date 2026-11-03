@@ -14,7 +14,7 @@
 
 [Getting Started](#getting-started) · [Configure](#configure) · [Limitations](#limitations) · [Build](#build) · [Support](#support) · [License](#license)
 
-Unofficial snap packaging for [rembg](https://github.com/danielgatis/rembg), a tool that removes image backgrounds with AI models run locally on the CPU.
+Unofficial snap packaging for [rembg](https://github.com/danielgatis/rembg), a tool that removes image backgrounds locally using AI models.
 
 </div>
 
@@ -60,11 +60,19 @@ sudo snap connect rembg:removable-media   # optional: /media, /mnt
 
 Models are stored in `~/snap/rembg/common/models` and are kept across snap refreshes. Download one ahead of time with `rembg d <model>`. Custom ONNX models passed with `model_path` must be placed under `~/snap/rembg/common`.
 
+CPU support is included. For NVIDIA acceleration, install the optional CUDA component:
+
+```bash
+sudo snap install rembg+cuda
+```
+
+This requires an NVIDIA Turing or newer GPU and a [compatible NVIDIA driver](https://docs.nvidia.com/deeplearning/cudnn/backend/latest/reference/support-matrix.html) for the bundled CUDA 13 and cuDNN 9 libraries. Restart rembg after installing or removing the component. To return to CPU-only operation, run `sudo snap remove rembg+cuda`.
+
 ## Limitations
 
-- Only the CPU build of ONNX Runtime is included; NVIDIA CUDA and AMD ROCm acceleration are not available.
+- AMD ROCm acceleration is not included.
 - Hidden files directly under your home directory are inaccessible, including models in an existing `~/.u2net` folder. Copy them into `~/snap/rembg/common/models/<model>/` to avoid downloading them again.
-- ONNX Runtime warns that it cannot detect GPU devices. These warnings go to stderr and do not affect the output image.
+- During CPU-only operation, ONNX Runtime warnings about GPU detection can be ignored.
 
 ## Build
 
@@ -74,6 +82,8 @@ cd rembg-snap
 sudo snap install snapcraft --classic
 snapcraft pack
 ```
+
+The build also produces the optional CUDA `.comp` package.
 
 ## Support
 
